@@ -1,40 +1,4 @@
 
-'''
-print("------------- Conversor para JPG ------------------")
-
-from pathlib import Path
-from PIL import Image
-import os
-
-home = Path.home()
-
-pasta_origem = home / "Downloads" / "FOTOSCADASTRO"
-pasta_destino = home / "Downloads" / "FOTOS-USUARIOSJPG"
-
-os.makedirs(pasta_destino, exist_ok=True)
-
-if not pasta_origem.exists():
-    print(f"A pasta de origem não existe: {pasta_origem}")
-else:
-
-    for arquivo in os.listdir(pasta_origem):
-        if arquivo.lower().endswith((".jflf", ".jfif", ".jpeg")):
-            caminho_origem = pasta_origem / arquivo
-            nome_sem_ext = arquivo.rsplit(".", 1)[0]
-            caminho_destino = pasta_destino / f"{nome_sem_ext}.jpg"
-
-            try:
-                img = Image.open(caminho_origem)
-                img.convert("RGB").save(caminho_destino, "JPEG")
-                print(f"Convertida: {arquivo} -> {caminho_destino}")
-            except Exception as e:
-                print(f"Erro ao converter {arquivo}: {e}")
-
-print("----------------------Conversão concluída!-------------------------------")
-
-'''
-
-
 
 print("---------------------- Conversor de Imagens ----------------------")
 

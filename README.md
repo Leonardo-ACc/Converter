@@ -18,8 +18,10 @@ Aplicação desktop para conversão em lote de arquivos de imagem, desenvolvida 
 
 [x] Estrutura da janela desktop com Electron
 
-[ ] Integração do IPC (Preload/Main) para seleção de pastas nativas
+[x] Integração do IPC (Preload/Main) para seleção de pastas nativas
 
-[ ] Conexão do processo Python em background para conversão em massa
+[x] Conexão do processo Python em background para conversão em massa
 
 [ ] Indicador de progresso e caixa de status em tempo real
+
+[ ] iniciar estilização

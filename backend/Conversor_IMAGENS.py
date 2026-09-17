@@ -1,87 +1,132 @@
-
-
-print("---------------------- Conversor de Imagens ----------------------")
-
-from pathlib import Path
-from PIL import Image
+import sys
 import os
-import shutil
+import json
+from PIL import Image
 
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding='utf-8')
 
-home = Path.home()
-while True:
-    caminho_origem_input = input("Digite o caminho da pasta de origem (ou apenas o nome se estiver em Downloads): ").strip()
-
-    if not os.path.isabs(caminho_origem_input):
-        pasta_origem = home / "Downloads" / caminho_origem_input
-    else:
-        pasta_origem = Path(caminho_origem_input)
-
-    if not pasta_origem.exists():
-        print(f"\033[91mA pasta de origem: '{caminho_origem_input}' não existe! Tente novamente.\033[0m")
-    else:
-        break
-
-
-formatos_validos = {
-    "jpg": "JPEG",
-    "jpeg": "JPEG",
-    "png": "PNG",
-    "jfif": "JFIF",
-    "bmp": "BMP",
-    "tiff": "TIFF",
-    "webp": "WEBP",
-    "gif": "GIF",
-    "pdf": "PDF",
-}
-
-
-while True:
-    formato_saida = input("Digite o formato de saída desejado (ex: jpg, png, jfif...): ").lower()
-    if formato_saida in formatos_validos:
-        formato_pillow = formatos_validos[formato_saida]
-        break
-    else:
-        print(f"\033[91mFormato '{formato_saida}' não suportado! Tente novamente.\033[0m")
-
-
-pasta_criada = False
-pasta_destino = None
-imagens_convertidas = 0
-
-for arquivo in os.listdir(pasta_origem):
-    caminho_origem = pasta_origem / arquivo
-
+def converter_imagens(pasta_origem, pasta_destino, formato_saida):
     try:
-        img = Image.open(caminho_origem)
-    except:
-        print(f"\033[91mIgnorado (não é imagem):\033[0m {arquivo}")
-        continue
+        if not os.path.exists(pasta_origem):
+            return {"sucesso": False, "mensagem": f"A pasta de origem '{pasta_origem}' não existe."}
 
-    try:
-        if formato_saida.lower() == "jpg":
-            img = img.convert("RGB")
+        formato_saida = formato_saida.lower().strip()
+        formatos_validos = ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'pdf', 'gif']
+        if formato_saida not in formatos_validos:
+            return {"sucesso": False, "mensagem": f"Formato inválido: {formato_saida}"}
 
-        pasta_destino = home / "Downloads" / f"{caminho_origem_input}_convertida_em_{formato_saida}"
-        nome_sem_ext = arquivo.rsplit(".", 1)[0]
-        caminho_destino = pasta_destino / f"{nome_sem_ext}.{formato_saida}"
+        extensoes_suportadas = ('.png', '.jpg', '.jpeg', '.webp', '.bmp', '.pdf', '.gif')
 
-        if not pasta_criada:
-            os.makedirs(pasta_destino, exist_ok=True)
-            pasta_criada = True
+        # 1. Carrega as imagens de origem antes de alterar qualquer coisa
+        arquivos_origem = [
+            f for f in os.listdir(pasta_origem) 
+            if f.lower().endswith(extensoes_suportadas) and os.path.isfile(os.path.join(pasta_origem, f))
+        ]
 
+        if not arquivos_origem:
+            return {"sucesso": False, "mensagem": "Nenhuma imagem suportada encontrada na pasta de origem."}
 
-        img.save(caminho_destino, formato_pillow)
-        imagens_convertidas += 1
+        caminhos_leitura = [os.path.join(pasta_origem, f) for f in arquivos_origem]
 
-        print(f"\033[94mConvertida:\033[0m {arquivo} -> {formato_saida}")
+        # 2. Definição da Pasta de Destino
+        destino_manual = pasta_destino is not None and pasta_destino != 'null' and pasta_destino.strip() != ''
+
+        if not destino_manual:
+            nome_pasta_origem = os.path.basename(os.path.normpath(pasta_origem))
+            pasta_pai = os.path.dirname(os.path.normpath(pasta_origem))
+            
+            if " Convertidas em " in nome_pasta_origem:
+                nome_pasta_origem = nome_pasta_origem.split(" Convertidas em ")[0]
+
+            nome_pasta_saida = f"{nome_pasta_origem} Convertidas em {formato_saida.upper()}"
+            pasta_destino = os.path.join(pasta_pai, nome_pasta_saida)
+
+            # Reutiliza a pasta convertida antiga se já existir uma no mesmo diretório
+            if not os.path.exists(pasta_destino):
+                for item in os.listdir(pasta_pai):
+                    caminho_item = os.path.join(pasta_pai, item)
+                    if os.path.isdir(caminho_item) and " Convertidas em " in item and item.startswith(nome_pasta_origem):
+                        pasta_destino = caminho_item
+                        break
+
+        if not os.path.exists(pasta_destino):
+            os.makedirs(pasta_destino)
+
+        convertidos = 0
+        erros = 0
+
+        # 3. Processa a conversão salvando no destino
+        for caminho_entrada in caminhos_leitura:
+            nome_arquivo = os.path.basename(caminho_entrada)
+            nome_base, ext_antiga = os.path.splitext(nome_arquivo)
+            
+            nome_saida = f"{nome_base}.{formato_saida}"
+            caminho_saida = os.path.join(pasta_destino, nome_saida)
+
+            try:
+                with Image.open(caminho_entrada) as img:
+                    if formato_saida in ['jpg', 'jpeg'] and img.mode in ('RGBA', 'LA', 'P'):
+                        img = img.convert('RGB')
+                    
+                    salvar_formato = 'JPEG' if formato_saida in ['jpg', 'jpeg'] else formato_saida.upper()
+                    img.save(caminho_saida, format=salvar_formato)
+                    convertidos += 1
+
+            except Exception:
+                erros += 1
+
+        # 4. LIMPEZA DOS ARQUIVOS ANTIGOS NA PASTA DE DESTINO
+        # Deleta arquivos da pasta de destino que possuem extensão diferente do formato atual
+        if convertidos > 0 and os.path.exists(pasta_destino):
+            for item in os.listdir(pasta_destino):
+                caminho_item = os.path.join(pasta_destino, item)
+                if os.path.isfile(caminho_item) and item.lower().endswith(extensoes_suportadas):
+                    # Se não for da nova extensão e a origem for diferente (para não apagar originais), apaga do destino
+                    if not item.lower().endswith(f".{formato_saida}"):
+                        if os.path.abspath(caminho_item) not in [os.path.abspath(c) for c in caminhos_leitura]:
+                            try:
+                                os.remove(caminho_item)
+                            except Exception:
+                                pass
+
+        # 5. RENOMEAÇÃO DA PASTA PARA O NOVO FORMATO
+        if convertidos > 0:
+            nome_pasta_atual = os.path.basename(os.path.normpath(pasta_destino))
+            if " Convertidas em " in nome_pasta_atual:
+                base_nome = nome_pasta_atual.split(" Convertidas em ")[0]
+                novo_nome_pasta = f"{base_nome} Convertidas em {formato_saida.upper()}"
+                nova_pasta_destino = os.path.join(os.path.dirname(os.path.normpath(pasta_destino)), novo_nome_pasta)
+
+                if pasta_destino != nova_pasta_destino:
+                    try:
+                        if os.path.exists(nova_pasta_destino):
+                            for item in os.listdir(pasta_destino):
+                                os.replace(os.path.join(pasta_destino, item), os.path.join(nova_pasta_destino, item))
+                            os.rmdir(pasta_destino)
+                        else:
+                            os.rename(pasta_destino, nova_pasta_destino)
+                        pasta_destino = nova_pasta_destino
+                    except Exception:
+                        pass
+
+        return {
+            "sucesso": True,
+            "mensagem": f"Conversão concluída! {convertidos} imagens salvas em '{os.path.basename(pasta_destino)}'.",
+            "convertidos": convertidos,
+            "erros": erros,
+            "pastaDestino": pasta_destino
+        }
 
     except Exception as e:
+        return {"sucesso": False, "mensagem": f"Erro interno no Python: {str(e)}"}
 
-        print(f"\033[91mErro ao converter\033[0m {arquivo}: {e}")
-
-if imagens_convertidas > 0:
-    print(f"---------------------- \033[92mConversão concluída!\033[0m \033[93m{imagens_convertidas}\033[0m imagens convertidas em {formato_saida}. ----------------------")
-else:
-    print("\033[93m ---------------------- Nenhuma imagem foi convertida! ----------------------\033[0m")
-    #shutil.rmtree(pasta_destino) #faz a exclusao da pasta_destino, caso nenhuma imagem for convertida, por algum motivo antes a pasta era criada mesmo sem nenhuma imagem convertida. Aí tive que colocar o shutil para excluir, mas a solução foi colocar a lista de formatos validos, que deixa ele obsoleto, mas ele ta ai caso precise
+if __name__ == "__main__":
+    if len(sys.argv) >= 4:
+        origem = sys.argv[1]
+        destino = sys.argv[2]
+        formato = sys.argv[3]
+        resultado = converter_imagens(origem, destino, formato)
+        print(json.dumps(resultado, ensure_ascii=False))
+    else:
+        print(json.dumps({"sucesso": False, "mensagem": "Argumentos insuficientes fornecidos ao script."}))

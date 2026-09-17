@@ -6,7 +6,7 @@ Aplicação desktop para conversão em lote de arquivos de imagem, desenvolvida 
 
 ## 🚀 Tecnologias Utilizadas
 
-* **Frontend:** React + Vite 
+* **Frontend:** React + javascript 
 * **Desktop Shell:** Electron (Janela nativa e integração com o SO)
 * **Backend / Processamento:** Python (Automação e manipulação de imagens)
 

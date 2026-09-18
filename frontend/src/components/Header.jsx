@@ -4,8 +4,15 @@ import './Header.css';
 export function Header() {
   return (
     <header className="header">
-      <h1 className='header-title'>CONVERTER</h1>
-      <p className='header-subtitle'>Converta dezenas ou centenas de imagens direto no seu computador</p>
+      <div className="header-title">
+          <p className='h1first'>C</p>
+          <p className='h1mid'>ONV</p>
+          <p className='h2mid'>ER</p>
+          <p className='h1mid'>STE</p>
+          <p className='h1first'>R</p>
+      </div>
+
+
 
     </header>
   );

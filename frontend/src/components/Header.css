@@ -1,19 +1,24 @@
+@import url('https://fonts.googleapis.com/css2?family=Oxanium:wght@200..800&display=swap');
 
 
-header{
-    display: flex;
+
+header {
+  display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   background-color: #1b1d23;
   padding: 40px 20px 30px;
   text-align: center;
-  border-bottom: 6px solid #9feaf9;
+  border-bottom: 5px solid #9feaf9;
+  font-family: "Oxanium", sans-serif;
   box-shadow: 0 20px 20px rgba(48, 190, 205, 0.2);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .header-logo {
-  width: 80px;
+  width: clamp(50px, 8vw, 80px);
   height: auto;
   margin-bottom: 20px;
   filter: drop-shadow(0 0 10px rgba(159, 234, 249, 0.3));
@@ -21,16 +26,30 @@ header{
 
 .header-title {
   color: #9feaf9;
-  font-size: 1.8rem;
-  font-weight: 300;
+  display: flex;
+  flex-wrap: wrap; 
+  justify-content: center;
+  font-size: clamp(2.0rem, 6vw, 5rem);
+  font-weight: 200;
   margin-bottom: 8px;
   letter-spacing: 0.5px;
+  align-items: center;
+
+}
+
+.h1mid {
+  font-size: clamp(1.6rem, 5vw, 3.6rem);
+}
+
+.h2mid {
+  font-size: clamp(1.3rem, 4.5vw, 3.2rem);
+  font-weight: 220;
 }
 
 .header-subtitle {
   color: #9feaf9;
-  font-size: 0.95rem;
-  font-weight: 400;
+  font-size: clamp(0.65rem, 1.5vw, 1rem);
+  font-weight: 200;
   margin-bottom: 24px;
 }
 

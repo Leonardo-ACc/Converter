@@ -75,8 +75,7 @@ function App() {
   };
 
   return (
-    <div className="container">
-      <Header />
+    <div className="container"><Header />
 
       <main className="form-card">
         {/* Pasta Origem */}

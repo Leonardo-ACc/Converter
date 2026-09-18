@@ -12,13 +12,13 @@ def converter_imagens(pasta_origem, pasta_destino, formato_saida):
             return {"sucesso": False, "mensagem": f"A pasta de origem '{pasta_origem}' não existe."}
 
         formato_saida = formato_saida.lower().strip()
-        formatos_validos = ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'pdf', 'gif']
+        formatos_validos = ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'pdf', 'gif','jfif', 'tiff' ]
         if formato_saida not in formatos_validos:
             return {"sucesso": False, "mensagem": f"Formato inválido: {formato_saida}"}
 
-        extensoes_suportadas = ('.png', '.jpg', '.jpeg', '.webp', '.bmp', '.pdf', '.gif')
+        extensoes_suportadas = ('.png', '.jpg', '.jpeg', '.webp', '.bmp', '.pdf', '.gif','.jfif', '.tiff')
 
-        # 1. Carrega as imagens de origem antes de alterar qualquer coisa
+        # 1. Verificador dos arquivos da pasta_origem, se são imagens
         arquivos_origem = [
             f for f in os.listdir(pasta_origem) 
             if f.lower().endswith(extensoes_suportadas) and os.path.isfile(os.path.join(pasta_origem, f))
@@ -27,43 +27,67 @@ def converter_imagens(pasta_origem, pasta_destino, formato_saida):
         if not arquivos_origem:
             return {"sucesso": False, "mensagem": "Nenhuma imagem suportada encontrada na pasta de origem."}
 
-        caminhos_leitura = [os.path.join(pasta_origem, f) for f in arquivos_origem]
+        caminhos_leitura = [
+            os.path.join(pasta_origem, f) 
+            for f in arquivos_origem
+        ]
 
-        # 2. Definição da Pasta de Destino
-        destino_manual = pasta_destino is not None and pasta_destino != 'null' and pasta_destino.strip() != ''
+        # 2. Definiçao da Pasta de Destino
 
+        # 2.1 ve se o destino foi manual
+        destino_manual = (
+            pasta_destino is not None 
+            and pasta_destino != 'null' 
+            and pasta_destino.strip() != ''
+        )
+
+        #2.2 criaçao da pasta automatica
         if not destino_manual:
             nome_pasta_origem = os.path.basename(os.path.normpath(pasta_origem))
-            pasta_pai = os.path.dirname(os.path.normpath(pasta_origem))
+            pasta_pai = os.path.dirname(os.path.normpath(pasta_origem)) # diretorio C:\Users\Leonardo por ex
             
             if " Convertidas em " in nome_pasta_origem:
                 nome_pasta_origem = nome_pasta_origem.split(" Convertidas em ")[0]
 
-            nome_pasta_saida = f"{nome_pasta_origem} Convertidas em {formato_saida.upper()}"
-            pasta_destino = os.path.join(pasta_pai, nome_pasta_saida)
+            nome_pasta_saida = f"{nome_pasta_origem} Convertidas em {formato_saida.upper()}" # nome da pasta nova
+
+            pasta_destino = os.path.join(pasta_pai, nome_pasta_saida) # caminho completo
 
             # Reutiliza a pasta convertida antiga se já existir uma no mesmo diretório
             if not os.path.exists(pasta_destino):
-                for item in os.listdir(pasta_pai):
-                    caminho_item = os.path.join(pasta_pai, item)
-                    if os.path.isdir(caminho_item) and " Convertidas em " in item and item.startswith(nome_pasta_origem):
-                        pasta_destino = caminho_item
-                        break
+                nome_pasta_esperada = f"{nome_pasta_origem} Convertidas em {formato_saida.upper()}"
 
+                caminho_pasta_esperada = os.path.join(pasta_pai, nome_pasta_esperada) # caminho_pasta_esperada = o caminho completo
+
+                # procura somente a pasta correspondente ao formato escolhido
+                if os.path.isdir(caminho_pasta_esperada):
+                    pasta_destino = caminho_pasta_esperada
+
+        # se pasta_destino nao existe, cria o trem
         if not os.path.exists(pasta_destino):
             os.makedirs(pasta_destino)
+
+        # pra burro nao escolher a propria pasta // os.path.abspath() transforma os caminhos em caminhos absolutos
+        if os.path.abspath(pasta_origem) == os.path.abspath(pasta_destino):
+            return {
+                "sucesso": False,
+                "mensagem": "A pasta de destino não pode ser a mesma pasta de origem."
+            }
 
         convertidos = 0
         erros = 0
 
         # 3. Processa a conversão salvando no destino
+
+        # pega uma imagem por vez
         for caminho_entrada in caminhos_leitura:
             nome_arquivo = os.path.basename(caminho_entrada)
-            nome_base, ext_antiga = os.path.splitext(nome_arquivo)
+            nome_base, ext_antiga = os.path.splitext(nome_arquivo) # pra dividir a extensao
             
             nome_saida = f"{nome_base}.{formato_saida}"
             caminho_saida = os.path.join(pasta_destino, nome_saida)
 
+            # basicamente serve pra arrumar um problema de transparencia do jpg
             try:
                 with Image.open(caminho_entrada) as img:
                     if formato_saida in ['jpg', 'jpeg'] and img.mode in ('RGBA', 'LA', 'P'):
@@ -77,6 +101,7 @@ def converter_imagens(pasta_origem, pasta_destino, formato_saida):
                 erros += 1
 
         # 4. LIMPEZA DOS ARQUIVOS ANTIGOS NA PASTA DE DESTINO
+
         # Deleta arquivos da pasta de destino que possuem extensão diferente do formato atual
         if convertidos > 0 and os.path.exists(pasta_destino):
             for item in os.listdir(pasta_destino):
@@ -110,6 +135,17 @@ def converter_imagens(pasta_origem, pasta_destino, formato_saida):
                     except Exception:
                         pass
 
+
+        if convertidos == 0:
+            return {
+                "sucesso": False,
+                "mensagem": "Nenhuma imagem foi convertida.",
+                "convertidos": 0,
+                "erros": erros,
+                "pastaDestino": pasta_destino
+            }
+
+        
         return {
             "sucesso": True,
             "mensagem": f"Conversão concluída! {convertidos} imagens salvas em '{os.path.basename(pasta_destino)}'.",
